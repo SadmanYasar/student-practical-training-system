@@ -1,4 +1,67 @@
 <!-- login.php -->
+<?php
+if (isset($_POST['submit'])) {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+    $role = $_POST['role'];
+
+    // Connect to the database
+    require_once('dbconn.php');
+
+    // Check if email exists
+    $sql = "SELECT * FROM user WHERE email = '$email'";
+    $result = mysqli_query($conn, $sql);
+
+    if (!$result) {
+        die("Error: " . mysqli_error($conn));
+    }
+
+    // If email exists, verify password
+    if (mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        $hashedPassword = $row['password'];
+
+        // Verify the password
+        if (password_verify($password, $hashedPassword)) {
+            // Password matches, create session variables
+            session_start();
+            $_SESSION['user_id'] = $row['id'];
+            $_SESSION['email'] = $row['email'];
+            $_SESSION['role'] = $role;
+
+            // Redirect to the appropriate dashboard based on the role
+            if ($role === 'student') {
+                header("Location: student_dashboard.php");
+                exit;
+            } elseif ($role === 'coordinator') {
+                header("Location: coordinator_dashboard.php");
+                exit;
+            } elseif ($role === 'admin') {
+                header("Location: admin_dashboard.php");
+                exit;
+            } else {
+                // Invalid role
+                $response = "<div class='alert alert-danger' role='alert'>
+                        <strong>Error!</strong> Invalid role.
+                    </div>";
+            }
+        } else {
+            // Password does not match
+            $response = "<div class='alert alert-danger' role='alert'>
+                    <strong>Error!</strong> Incorrect password.
+                </div>";
+        }
+    } else {
+        // Email does not exist
+        $response = "<div class='alert alert-danger' role='alert'>
+                <strong>Error!</strong> Email not found.
+            </div>";
+    }
+
+    // Close the database connection
+    mysqli_close($conn);
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -49,15 +112,21 @@
                                             <input type="password" name="password" class="form-control form-control-user" id="exampleInputPassword" placeholder="Password" required>
                                         </div>
                                         <div class="form-check form-check-inline small">
-                                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault1" checked>
+                                            <input class="form-check-input" type="radio" name="role" value="student" id="flexRadioDefault1" checked>
                                             <label class="form-check-label" for="flexRadioDefault1">
                                                 Student
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline small">
-                                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault2">
+                                            <input class="form-check-input" type="radio" name="role" value="coordinator" id="flexRadioDefault2">
                                             <label class="form-check-label" for="flexRadioDefault2">
                                                 Coordinator
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-inline small">
+                                            <input class="form-check-input" type="radio" name="role" value="admin" id="flexRadioDefault2">
+                                            <label class="form-check-label" for="flexRadioDefault2">
+                                                Admin
                                             </label>
                                         </div>
                                         <div class="form-group">
@@ -70,25 +139,7 @@
                                         <input name="submit" type="submit" class="btn btn-primary btn-user btn-block" value="Login">
                                         <hr>
                                         <div class="text-center">
-                                            <?php
-                                            if (isset($_POST['submit'])) {
-                                                $email = $_POST['email'];
-                                                $password = $_POST['password'];
-
-                                                if (empty($email) || empty($password)) { ?>
-                                                    <div class="alert alert-danger" role="alert">
-                                                        <strong>Warning!</strong> Please fill all the fields.
-                                                    </div>
-                                                <?php
-                                                } else {
-                                                    /* Connect to database table users */
-                                                ?>
-                                                    <div class="alert alert-success" role="alert">
-                                                        <strong>Success!</strong> You have successfully logged in.
-                                                    </div>
-                                            <?php }
-                                            } ?>
-                                            </p>
+                                            <?php echo $response ?? ""; ?>
                                         </div>
                                     </form>
                                     <hr>
